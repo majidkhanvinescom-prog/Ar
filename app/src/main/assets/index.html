@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AURA AI Assistant</title>
+    <style>
+        :root {
+            --dark-bg: #0B0F19;
+            --emerald: #10B981;
+            --neon-blue: #3B82F6;
+            --purple: #8B5CF6;
+            --panel-bg: #1E293B;
+            --text-light: #FFFFFF;
+            --text-muted: #94A3B8;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-light);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        /* Banner */
+        .banner {
+            background-color: var(--panel-bg);
+            padding: 15px 20px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transform: translateY(-20px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .banner.show {
+            display: flex;
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .banner span {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .banner button {
+            background-color: var(--neon-blue);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .banner button:active {
+            background-color: #2563EB;
+        }
+
+        /* Main AI Area */
+        .ai-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        /* Orb */
+        .orb-wrapper {
+            position: relative;
+            width: 220px;
+            height: 220px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 40px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .orb {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--neon-blue) 0%, var(--dark-bg) 80%);
+            box-shadow: 0 0 40px var(--neon-blue);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2;
+        }
+
+        .orb svg {
+            width: 40px;
+            height: 40px;
+            fill: var(--dark-bg);
+            transition: all 0.3s;
+        }
+
+        .ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid var(--neon-blue);
+            opacity: 0.3;
+            transition: all 0.5s ease;
+        }
+
+        .ring-1 { width: 160px; height: 160px; }
+        .ring-2 { width: 190px; height: 190px; }
+
+        /* States */
+        .state-listening .orb {
+            background: radial-gradient(circle, var(--emerald) 0%, var(--dark-bg) 80%);
+            box-shadow: 0 0 60px var(--emerald);
+            transform: scale(1.1);
+        }
+        .state-listening .ring {
+            border-color: var(--emerald);
+            animation: ripple 1.5s infinite linear;
+        }
+        
+        .state-processing .orb {
+            background: radial-gradient(circle, var(--purple) 0%, var(--dark-bg) 80%);
+            box-shadow: 0 0 50px var(--purple);
+            animation: spin 2s linear infinite;
+        }
+        .state-processing .ring {
+            border-color: var(--purple);
+            border-style: dashed;
+            animation: spin-reverse 3s linear infinite;
+        }
+
+        .state-speaking .orb {
+            background: radial-gradient(circle, var(--emerald) 0%, var(--dark-bg) 80%);
+            box-shadow: 0 0 70px var(--emerald);
+            transform: scale(1.15);
+            animation: pulse-speak 0.4s infinite alternate ease-in-out;
+        }
+        .state-speaking .ring {
+            border-color: var(--emerald);
+            animation: pulse-ring 0.4s infinite alternate ease-in-out;
+        }
+
+        @keyframes ripple {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes spin-reverse {
+            100% { transform: rotate(-360deg); }
+        }
+        @keyframes pulse-speak {
+            0% { transform: scale(1.1); }
+            100% { transform: scale(1.25); }
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(1); opacity: 0.2; }
+            100% { transform: scale(1.15); opacity: 0.6; }
+        }
+
+        /* Text Displays */
+        #response {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--neon-blue);
+            text-align: center;
+            min-height: 32px;
+            margin-bottom: 15px;
+            transition: color 0.5s;
+        }
+        
+        .state-listening #response, .state-speaking #response { color: var(--emerald); }
+        .state-processing #response { color: var(--purple); }
+
+        #transcript {
+            font-size: 16px;
+            color: var(--text-muted);
+            text-align: center;
+            max-width: 80%;
+            line-height: 1.4;
+        }
+
+        /* Settings Button */
+        .settings-btn {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            background-color: var(--panel-bg);
+            border: none;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.2s;
+        }
+        .settings-btn:active { transform: scale(0.9); }
+        .settings-btn svg { fill: var(--text-light); width: 24px; height: 24px; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            justify-content: center;
+            align-items: flex-end;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .modal.show {
+            display: flex;
+            opacity: 1;
+        }
+        .modal-content {
+            background-color: var(--panel-bg);
+            width: 100%;
+            max-width: 500px;
+            border-radius: 24px 24px 0 0;
+            padding: 30px 24px;
+            box-sizing: border-box;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .modal.show .modal-content {
+            transform: translateY(0);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+        }
+        
+        .cmd-list {
+            max-height: 250px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 15px;
+        }
+        .cmd-item {
+            background: #334155;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .cmd-info strong { display: block; margin-bottom: 4px; font-size: 15px; }
+        .cmd-info span { color: var(--text-muted); font-size: 12px; word-break: break-all; }
+        .cmd-del { color: #EF4444; background: none; border: none; cursor: pointer; font-weight: bold; font-size: 14px; padding: 5px;}
+
+        .input-group {
+            margin-bottom: 12px;
+        }
+        .input-group input {
+            width: 100%;
+            background: #0F172A;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--emerald);
+        }
+        .btn-add {
+            width: 100%;
+            background-color: var(--emerald);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+        .btn-add:active { background-color: #059669; }
+
+    </style>
+</head>
+<body>
+
+    <div class="banner" id="permBanner">
+        <span>Microphone Access Required</span>
+        <button onclick="requestPermissions()">Enable</button>
+    </div>
+    
+    <div class="ai-container" id="aiContainer">
+        <div class="orb-wrapper" onclick="toggleListening()">
+            <div class="ring ring-1"></div>
+            <div class="ring ring-2"></div>
+            <div class="orb">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+            </div>
+        </div>
+        
+        <div id="response">System Online.</div>
+        <div id="transcript">Tap the orb to wake AURA</div>
+    </div>
+
+    <button class="settings-btn" onclick="toggleModal()">
+        <svg viewBox="0 0 24 24">
+            <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+        </svg>
+    </button>
+
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Command Map</h2>
+                <button class="close-btn" onclick="toggleModal()">✕</button>
+            </div>
+            
+            <div class="cmd-list" id="cmdList"></div>
+            
+            <div class="input-group">
+                <input type="text" id="newPhrase" placeholder="When I say (e.g. 'youtube')">
+            </div>
+            <div class="input-group">
+                <input type="text" id="newAction" placeholder="Action URL/Intent (e.g. 'https://youtube.com')">
+            </div>
+            <button class="btn-add" onclick="addCommand()">Add Command</button>
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('aiContainer');
+        const transcriptEl = document.getElementById('transcript');
+        const responseEl = document.getElementById('response');
+        const banner = document.getElementById('permBanner');
+        
+        let commands = [
+            { phrase: 'open camera', action: 'intent://#Intent;action=android.media.action.IMAGE_CAPTURE;end' },
+            { phrase: 'open settings', action: 'intent://#Intent;action=android.settings.SETTINGS;end' },
+            { phrase: 'open clock', action: 'intent://#Intent;action=android.intent.action.SHOW_ALARMS;end' },
+            { phrase: 'call', action: 'call' },
+            { phrase: 'search', action: 'search' }
+        ];
+
+        let recognizing = false;
+        let recognition;
+        let synth = window.speechSynthesis;
+
+        // Initialize Speech Recognition
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+
+            recognition.onstart = function() {
+                recognizing = true;
+                setState('listening');
+                transcriptEl.innerText = 'Listening...';
+            };
+
+            recognition.onerror = function(event) {
+                if (event.error === 'not-allowed') {
+                    banner.classList.add('show');
+                }
+                setState('');
+                transcriptEl.innerText = 'Error: ' + event.error;
+                recognizing = false;
+            };
+
+            recognition.onend = function() {
+                recognizing = false;
+                if(container.className.includes('state-listening')) {
+                    setState('processing');
+                    // Fallback reset if no results
+                    setTimeout(() => { if(container.className.includes('state-processing')) setState(''); }, 3000);
+                }
+            };
+
+            recognition.onresult = function(event) {
+                let interim = '';
+                let final = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) final += event.results[i][0].transcript;
+                    else interim += event.results[i][0].transcript;
+                }
+                
+                transcriptEl.innerText = final || interim;
+                
+                if (final) {
+                    setState('processing');
+                    setTimeout(() => processCommand(final.toLowerCase()), 500);
+                }
+            };
+        } else {
+            responseEl.innerText = "Speech API Not Supported";
+            transcriptEl.innerText = "Please use Chrome for Android.";
+        }
+
+        function setState(state) {
+            container.className = 'ai-container' + (state ? ' state-' + state : '');
+        }
+
+        function toggleListening() {
+            if (recognizing) recognition.stop();
+            else recognition.start();
+        }
+
+        function speak(text, callback) {
+            responseEl.innerText = text;
+            setState('speaking');
+            
+            // Cancel any ongoing speech
+            synth.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.1;
+            
+            utterance.onend = () => {
+                setState('');
+                if(callback) callback();
+            };
+            
+            utterance.onerror = () => {
+                setState('');
+                if(callback) callback();
+            };
+            
+            synth.speak(utterance);
+        }
+
+        function processCommand(text) {
+            let handled = false;
+            for (let cmd of commands) {
+                if (text.includes(cmd.phrase)) {
+                    handled = true;
+                    if (cmd.action === 'search') {
+                        let query = text.replace(cmd.phrase, '').replace('aura', '').trim();
+                        speak('Searching the web for ' + query, () => {
+                            window.location.href = 'https://www.google.com/search?q=' + encodeURIComponent(query);
+                        });
+                    } else if (cmd.action === 'call') {
+                        let target = text.replace(cmd.phrase, '').replace('aura', '').trim();
+                        speak('Calling ' + target, () => {
+                            window.location.href = 'tel:' + target;
+                        });
+                    } else {
+                        speak('Executing ' + cmd.phrase, () => {
+                            window.location.href = cmd.action;
+                        });
+                    }
+                    break;
+                }
+            }
+            if (!handled) {
+                speak("I heard you say: " + text + ", but I don't have a command for that.");
+            }
+        }
+
+        function requestPermissions() {
+            navigator.mediaDevices.getUserMedia({ audio: true }).then(() => {
+                banner.classList.remove('show');
+            }).catch(e => alert('Please grant microphone permission in site settings.'));
+        }
+
+        /* Modal Logic */
+        function toggleModal() {
+            const m = document.getElementById('settingsModal');
+            if(m.classList.contains('show')) {
+                m.classList.remove('show');
+                setTimeout(() => m.style.display = 'none', 300);
+            } else {
+                m.style.display = 'flex';
+                // Trigger reflow
+                void m.offsetWidth;
+                m.classList.add('show');
+                renderCommands();
+            }
+        }
+
+        function renderCommands() {
+            const list = document.getElementById('cmdList');
+            list.innerHTML = '';
+            commands.forEach((c, i) => {
+                list.innerHTML += `
+                <div class="cmd-item">
+                    <div class="cmd-info">
+                        <strong>${c.phrase}</strong>
+                        <span>${c.action}</span>
+                    </div>
+                    <button class="cmd-del" onclick="deleteCommand(${i})">✕</button>
+                </div>`;
+            });
+        }
+
+        function addCommand() {
+            const p = document.getElementById('newPhrase').value.toLowerCase().trim();
+            const a = document.getElementById('newAction').value.trim();
+            if(p && a) {
+                commands.push({phrase: p, action: a});
+                document.getElementById('newPhrase').value = '';
+                document.getElementById('newAction').value = '';
+                renderCommands();
+            }
+        }
+
+        function deleteCommand(index) {
+            commands.splice(index, 1);
+            renderCommands();
+        }
+    </script>
+</body>
+</html>
